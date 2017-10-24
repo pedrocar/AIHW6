@@ -1,13 +1,17 @@
 function main() {
-	//TODO: do the search
-	//document.getElementById("cell00").value = 6;
+    //TODO: do the search
+    //document.getElementById("cell00").value = 6;
 
-	var s = createStructure();
-    evaluate(s);
+    var s = createStructure();
+    //evaluate(s);
     //var MRVList = MRV(s);
     BackTracking(s);
-
 }
+
+function log(string) {
+    document.getElementById("test").innerHTML = document.getElementById("test").innerHTML + string + "<br>";
+}
+
 
 function MRV(s) {
     
@@ -40,7 +44,7 @@ function BackTracking(d){
     //get the structure and do the initial setup
     counter = 0;
     var v2 = createVariables();
-    recursiveBacktracking(v2, d); 
+    recursiveBacktracking(v2, d, counter); 
     for (var i = 0; i < 9; i++) {
         for (var j = 0; j < 9; j++) {
             document.getElementById("cell"+i+j).innerHTML = v2[i][j];
@@ -49,14 +53,17 @@ function BackTracking(d){
 
 }
 
-function recursiveBacktracking(v, d){
-    document.getElementById("test").innerHTML = document.getElementById("test").innerHTML + v + "||||||||||||||||<br>";
+function recursiveBacktracking(v, d, counter){
     counter ++;
-    if (counter == 10) {
-        return true;
+    log("<br><br> layer:" + counter + "<br>" + v);
+    if (counter == 10) {  return true; }
+
+    //forward checking
+    evaluate(d);
+    if(findEmptyDomains(d)){
+        //if we find an empty domain, just return false
+        return false;
     }
-
-
 
     var result =false;
     //if assignment is complete, return assignment
@@ -75,37 +82,58 @@ function recursiveBacktracking(v, d){
             mrvListIndex = i;
         }
     }
-    //document.getElementById("test").innerHTML = JSON.stringify(mrvList[mrvListIndex]);
+
     var selectedVariableIndex = mrvList[mrvListIndex];
     var selectedVariableDomain = d[selectedVariableIndex[0]][selectedVariableIndex[1]];
-    
-    //var test= " ";
+    log("layer:" + counter + " " + "values to test for index " + selectedVariableIndex + ": " + selectedVariableDomain);
     //for each value in orderdomainvalues(var,assignment,csp)do
-    for (var i = 0; i < selectedVariableDomain.length; i++) { 
+    var i = 0;
+    //for (var i = 0; i < selectedVariableDomain.length; i++) { 
+    while (i < selectedVariableDomain.length) { 
         //if value is consistent with assignment given Constraints[csp] then
         var currentValue = selectedVariableDomain[i];
-        //print
-        //document.getElementById("cell"+selectedVariableIndex[0]+selectedVariableIndex[1]).;
-        //test = test + selectedVariableIndex + "| " + currentValue + "| " + isConsistent(selectedVariableIndex, currentValue, d) + "| ";
         
+        log(selectedVariableIndex + "| " + currentValue + "| " + isConsistent(selectedVariableIndex, currentValue, d) + "| ");
+
         if (isConsistent(selectedVariableIndex, currentValue, d)) {
+            vClone = createVariables();
+            dClone = createStructure();
+
+
             //add{var = value} to assignment
-            v[selectedVariableIndex[0]][selectedVariableIndex[1]] = currentValue;
+            log("layer:" + counter + " " + "add " + selectedVariableIndex + ": " + currentValue);
+            vClone[selectedVariableIndex[0]][selectedVariableIndex[1]] = currentValue;
+            setHtmlValue(selectedVariableIndex[0], selectedVariableIndex[1], currentValue);
+            dClone[selectedVariableIndex[0]][selectedVariableIndex[1]] = [1,1,1,1,1,1,1,1,1,1,1,1];    // workaround
+            
             //result<-RecursiveBacktracking(assignment,csp)
-            result = recursiveBacktracking(v.slice(0), d.slice(0));
+            result = recursiveBacktracking(vClone, dClone, counter);
             //if reulst != failure then return result
             if (result != false) {
+                v = vClone;
+                d = dClone;
                 return result;
             }
-            //remove {var = value} from assignment  
-            v[selectedVariableIndex[0]][selectedVariableIndex[1]] = 0;
-        }      
+            //remove {var = value} from assignment
+            removeHtmlValue(selectedVariableIndex[0], selectedVariableIndex[1]);
+            log("layer:" + counter + " " + "remove " + selectedVariableIndex + ": " + currentValue);
+        }     
+        i++; 
     }   
-    //document.getElementById("test").innerHTML = "" + test;
         
     return false;
     
 }
+
+
+function setHtmlValue(row, column, val) {
+    document.getElementById("cell"+row+column).value = val;
+}
+
+function removeHtmlValue(row, column) {
+    document.getElementById("cell"+row+column).value = '';
+}
+
 
 function isConsistent(selectedVariableIndex, currentValue) {
     var i;
@@ -161,48 +189,48 @@ function checkCompletion(v) {
 }
 
 function getDegree(s, row, col) {
-	//if cell has a value, its degree is 0
-	if (s[row][col].length == 1) {
-		return 0;
-	}
-	var i;
-	var j;
-	var degree = 0;
-	//check column
-	for (i = 0; i < 9; i++) {
-		if (i == row) {
-			continue;
-		}
-		value = parseInt(document.getElementById("cell"+i+col).value);
-		if (!value) {
-			degree++;
-		}
-	}
-	//check row
-	for (j = 0; j < 9; j++) {
-		if (j == col) {
-			continue;
-		}
-		value = parseInt(document.getElementById("cell"+row+j).value);
-		if (!value) {
-			degree++;
-		}
-	}
-	//check square
-	var i_init = (Math.floor(row/3))*3;
-	var j_init = (Math.floor(col/3))*3;
-	for (i = i_init; i < i_init+3; i++) {
-		for (j = j_init; j < j_init+3; j++) {
-			if (i == row || j == col) {
-				continue;
-			}
-			value = parseInt(document.getElementById("cell"+i+j).value);
-			if (!value) {
-				degree++;
-			}
-		}
-	}
-	return degree;
+    //if cell has a value, its degree is 0
+    if (s[row][col].length == 1) {
+        return 0;
+    }
+    var i;
+    var j;
+    var degree = 0;
+    //check column
+    for (i = 0; i < 9; i++) {
+        if (i == row) {
+            continue;
+        }
+        value = parseInt(document.getElementById("cell"+i+col).value);
+        if (!value) {
+            degree++;
+        }
+    }
+    //check row
+    for (j = 0; j < 9; j++) {
+        if (j == col) {
+            continue;
+        }
+        value = parseInt(document.getElementById("cell"+row+j).value);
+        if (!value) {
+            degree++;
+        }
+    }
+    //check square
+    var i_init = (Math.floor(row/3))*3;
+    var j_init = (Math.floor(col/3))*3;
+    for (i = i_init; i < i_init+3; i++) {
+        for (j = j_init; j < j_init+3; j++) {
+            if (i == row || j == col) {
+                continue;
+            }
+            value = parseInt(document.getElementById("cell"+i+j).value);
+            if (!value) {
+                degree++;
+            }
+        }
+    }
+    return degree;
 }
 
 
@@ -224,8 +252,8 @@ function FC(s){
     evaluate(z);
     //check if domains are empty
     
-    var t = JSON.stringify(z, null, 4);
-    document.getElementById("test").innerHTML = t;
+    //var t = JSON.stringify(z, null, 4);
+    //document.getElementById("test").innerHTML = t;
     if(!findEmptyDomains(z)){
         //if we do not find an empty array, then we have an appropriate assignment and we return the new array
         return z;
@@ -238,12 +266,13 @@ function FC(s){
 function findEmptyDomains(s){
     
     for (i = 0; i < 9; i++) {
-		for (j = 0; j < 9; j++) { 
-			if(s[i][j].length == 0){
+        for (j = 0; j < 9; j++) { 
+            if(s[i][j].length == 0){
+                log("empty domain for: " + i + ", " + j);
                 return true;
             }
-		}
-	}
+        }
+    }
     
     return false;
 
@@ -275,21 +304,21 @@ function pruneRow(s, row, j) {
 }
 
 function createStructure() {
-	var s = new Array();
-	for (i = 0; i < 9; i++) {
-		s[i] = new Array();
-		for (j = 0; j < 9; j++) { 
-			value = parseInt(document.getElementById("cell"+i+j).value);
-			if (value) {
-				s[i][j] = [1,1,1,1,1,1,1,1,1,1,1,1];    // workaround
-			}
-			else {
-				s[i][j] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-			}
-		}
-	}
-	// uncomment to print data structure
-	// document.getElementById("test").innerHTML = JSON.stringify(s);
+    var s = new Array();
+    for (i = 0; i < 9; i++) {
+        s[i] = new Array();
+        for (j = 0; j < 9; j++) { 
+            value = parseInt(document.getElementById("cell"+i+j).value);
+            if (value) {
+                s[i][j] = [1,1,1,1,1,1,1,1,1,1,1,1];    // workaround
+            }
+            else {
+                s[i][j] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+            }
+        }
+    }
+    // uncomment to print data structure
+    // document.getElementById("test").innerHTML = JSON.stringify(s);
     return s;
 }
 
